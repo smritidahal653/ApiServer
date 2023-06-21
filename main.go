@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,10 @@ type Application struct {
 	Description string       `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
-var applications []Application
+var (
+	applications []Application
+	mutex        sync.RWMutex
+)
 
 func main() {
 	router := mux.NewRouter()
@@ -64,7 +68,6 @@ func main() {
 	router.HandleFunc("/applications", createApplication).Methods("POST")
 	router.HandleFunc("/applications/{id}", updateApplication).Methods("PUT")
 	router.HandleFunc("/applications/{id}", deleteApplication).Methods("DELETE")
-	router.HandleFunc("/applications/search", searchApplications).Methods("GET").Queries("title", "{title}", "version", "{version}")
 
 	err := (http.ListenAndServe(":8000", router))
 	if err != nil {
@@ -73,10 +76,45 @@ func main() {
 }
 
 func getApplications(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(applications)
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	queryParams := r.URL.Query()
+
+	if len(queryParams) == 0 {
+		json.NewEncoder(w).Encode(applications)
+	} else {
+		filteredApplications := make([]Application, 0)
+
+		for _, app := range applications {
+			match := true
+
+			for key, values := range queryParams {
+				for _, value := range values {
+					if !isMatch(key, value, app) {
+						match = false
+						break
+					}
+				}
+
+				if !match {
+					break
+				}
+			}
+
+			if match {
+				filteredApplications = append(filteredApplications, app)
+			}
+		}
+
+		json.NewEncoder(w).Encode(filteredApplications)
+	}
 }
 
 func getApplication(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	params := mux.Vars(r)
 	for _, item := range applications {
 		if item.ID == params["id"] {
@@ -88,6 +126,9 @@ func getApplication(w http.ResponseWriter, r *http.Request) {
 }
 
 func createApplication(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	contentType := r.Header.Get("Content-Type")
 	var application Application
 
@@ -120,6 +161,9 @@ func createApplication(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateApplication(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	params := mux.Vars(r)
 	for index, item := range applications {
 		if item.ID == params["id"] {
@@ -161,6 +205,9 @@ func updateApplication(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteApplication(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	params := mux.Vars(r)
 	for index, item := range applications {
 		if item.ID == params["id"] {
@@ -169,35 +216,6 @@ func deleteApplication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(applications)
-}
-
-func searchApplications(w http.ResponseWriter, r *http.Request) {
-	queryParams := r.URL.Query()
-
-	filteredApplications := make([]Application, 0)
-
-	for _, app := range applications {
-		match := true
-
-		for key, values := range queryParams {
-			for _, value := range values {
-				if !isMatch(key, value, app) {
-					match = false
-					break
-				}
-			}
-
-			if !match {
-				break
-			}
-		}
-
-		if match {
-			filteredApplications = append(filteredApplications, app)
-		}
-	}
-
-	json.NewEncoder(w).Encode(filteredApplications)
 }
 
 func isMatch(key, value string, app Application) bool {
@@ -212,6 +230,10 @@ func isMatch(key, value string, app Application) bool {
 }
 
 func validateApplication(app *Application) error {
+	if app.ID != "" {
+		return fmt.Errorf("ID should not be a part of the payload")
+	}
+
 	if app.Title == "" {
 		return fmt.Errorf("title is required")
 	}
