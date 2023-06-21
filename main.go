@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -151,7 +152,15 @@ func createApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateApplication(&application); err != nil {
+	// Generate a unique ID
+	newID := 0
+	if len(applications) > 0 {
+		lastID := applications[len(applications)-1].ID
+		newID, _ = strconv.Atoi(lastID)
+	}
+	application.ID = strconv.Itoa(newID + 1)
+
+	if err := validateApplication(&application, false); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -190,7 +199,7 @@ func updateApplication(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err := validateApplication(&application); err != nil {
+			if err := validateApplication(&application, true); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -224,14 +233,38 @@ func isMatch(key, value string, app Application) bool {
 		return strings.Contains(strings.ToLower(app.Title), strings.ToLower(value))
 	case "version":
 		return strings.Contains(strings.ToLower(app.Version), strings.ToLower(value))
+	case "maintainer.name":
+		for _, maintainer := range app.Maintainers {
+			if strings.Contains(strings.ToLower(maintainer.Name), strings.ToLower(value)) {
+				return true
+			}
+		}
+		return false
+	case "maintainer.email":
+		for _, maintainer := range app.Maintainers {
+			if strings.Contains(strings.ToLower(maintainer.Email), strings.ToLower(value)) {
+				return true
+			}
+		}
+		return false
+	case "company":
+		return strings.Contains(strings.ToLower(app.Company), strings.ToLower(value))
+	case "website":
+		return strings.Contains(strings.ToLower(app.Website), strings.ToLower(value))
+	case "source":
+		return strings.Contains(strings.ToLower(app.Source), strings.ToLower(value))
+	case "license":
+		return strings.Contains(strings.ToLower(app.License), strings.ToLower(value))
+	case "description":
+		return strings.Contains(strings.ToLower(app.Description), strings.ToLower(value))
 	default:
 		return false
 	}
 }
 
-func validateApplication(app *Application) error {
-	if app.ID != "" {
-		return fmt.Errorf("ID should not be a part of the payload")
+func validateApplication(app *Application, isUpdate bool) error {
+	if isUpdate && app.ID != "" {
+		return fmt.Errorf("ID cannot be patched")
 	}
 
 	if app.Title == "" {
