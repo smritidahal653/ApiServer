@@ -40,29 +40,16 @@ var (
 )
 
 func main() {
+	router := setupRouter()
+
+	err := (http.ListenAndServe(":8000", router))
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func setupRouter() *mux.Router {
 	router := mux.NewRouter()
-	applications = append(applications, Application{
-		ID:          "1",
-		Title:       "App 1",
-		Version:     "1.0.0",
-		Maintainers: []Maintainer{{Name: "John Doe", Email: "john@example.com"}},
-		Company:     "ABC Inc.",
-		Website:     "https://example.com",
-		Source:      "https://github.com/example/app1",
-		License:     "MIT",
-		Description: "First application",
-	})
-	applications = append(applications, Application{
-		ID:          "2",
-		Title:       "App 2",
-		Version:     "2.3.1",
-		Maintainers: []Maintainer{{Name: "Jane Smith", Email: "jane@example.com"}},
-		Company:     "XYZ Corp",
-		Website:     "https://example.com",
-		Source:      "https://github.com/example/app2",
-		License:     "Apache-2.0",
-		Description: "Second application",
-	})
 
 	router.HandleFunc("/applications", getApplications).Methods("GET")
 	router.HandleFunc("/applications/{id}", getApplication).Methods("GET")
@@ -70,10 +57,7 @@ func main() {
 	router.HandleFunc("/applications/{id}", updateApplication).Methods("PUT")
 	router.HandleFunc("/applications/{id}", deleteApplication).Methods("DELETE")
 
-	err := (http.ListenAndServe(":8000", router))
-	if err != nil {
-		log.Fatal(err)
-	}
+	return router
 }
 
 func getApplications(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +107,8 @@ func getApplication(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(&Application{})
+
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func createApplication(w http.ResponseWriter, r *http.Request) {

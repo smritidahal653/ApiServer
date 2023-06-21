@@ -1,0 +1,9 @@
+title: Valid App 1
+version: 0.0.1
+company: Random Inc.
+website: https://website.com
+source: https://github.com/random/repo
+license: Apache-2.0
+description: |
+ ### Interesting Title
+ Some application content, and description

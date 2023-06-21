@@ -1,0 +1,10 @@
+title: App 3
+version: 1.0.0
+maintainers:
+- name: John Doe
+  email: john@hotmail.com
+company: ABC Inc.
+website: https://example.com
+source: https://github.com/example/app1
+license: MIT
+description: "test application"

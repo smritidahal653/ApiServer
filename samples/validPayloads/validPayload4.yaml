@@ -1,0 +1,10 @@
+title: App 4
+version: 1.0.0
+maintainers:
+- name: Jane Smith
+  email: jane@hotmail.com
+company: XYZ Corp
+website: https://example.com
+source: https://github.com/example/app2
+license: MIT
+description: "test application2"
