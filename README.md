@@ -4,8 +4,10 @@ This program is a RESTful API server built in Golang that allows you to manage a
 ## API Endpoints
 The following API endpoints are available:
 
+```
 GET /applications: Retrieve a list of applications based on query parameters. If no query parameters are passed, all applications are returned.
 GET /applications/{id}: Retrieve details of a specific application.
 POST /applications: Create a new application.
 PUT /applications/{id}: Update an existing application.
 DELETE /applications/{id}: Delete an application.
+```
